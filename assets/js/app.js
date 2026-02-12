@@ -172,107 +172,10 @@ const formatCurrency = (amount) => {
 
 function updateUI() {
     listEl.innerHTML = '';
-    transactions.forEach(addTransactionDOM);
-    updateValues();
-    updateChart();
-}
+    // transactions viene ordenado DESC (nuevo -> viejo) por la query de Firestore
+    // Usamos appendChild para mantener ese orden (nuevo arriba si la query es correcta)
 
-function updateValues() {
-    const amounts = transactions.map(t => t.amount);
-    const total = amounts.reduce((acc, item) => acc + item, 0).toFixed(2);
-
-    const income = transactions
-        .filter(t => t.amount > 0)
-        .reduce((acc, t) => acc + t.amount, 0)
-        .toFixed(2);
-
-    const expense = (
-        transactions
-            .filter(t => t.amount < 0)
-            .reduce((acc, t) => acc + t.amount, 0) * -1
-    ).toFixed(2);
-
-    totalBalanceEl.innerHTML = formatCurrency(total);
-    totalIncomeEl.innerHTML = formatCurrency(income);
-    totalExpenseEl.innerHTML = formatCurrency(expense);
-}
-
-function addTransactionDOM(transaction) {
-    const sign = transaction.amount < 0 ? '-' : '+';
-    const typeClass = transaction.amount < 0 ? 'expense' : 'income';
-
-    const item = document.createElement('li');
-    item.classList.add('transaction-item');
-
-    const categoryIcons = {
-        'comida': 'ph-hamburger',
-        'viandas': 'ph-lunchbox',
-        'servicios': 'ph-lightning',
-        'ocio': 'ph-confetti',
-        'tarjeta': 'ph-credit-card',
-        'transporte': 'ph-bus',
-        'salud': 'ph-first-aid',
-        'otros': 'ph-package'
-    };
-
-    const catIcon = categoryIcons[transaction.category] || 'ph-receipt';
-
-    // Manejo de fecha (compatibilidad con datos viejos y nuevos)
-    let dateStr = "Hoy";
-    if (transaction.createdAt && transaction.createdAt.toDate) {
-        dateStr = transaction.createdAt.toDate().toLocaleDateString();
-    } else if (transaction.dateIso) {
-        dateStr = new Date(transaction.dateIso).toLocaleDateString();
-    }
-
-    item.innerHTML = `
-        <div class="t-info">
-            <div class="t-icon ${typeClass}">
-                <i class="ph ${catIcon}"></i>
-            </div>
-            <div class="t-details">
-                <h4>${transaction.text}</h4>
-                <p>${dateStr} • ${transaction.category.charAt(0).toUpperCase() + transaction.category.slice(1)}</p>
-            </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="t-amount ${typeClass}">${sign}${formatCurrency(Math.abs(transaction.amount))}</span>
-            <button class="btn-icon delete-btn" data-id="${transaction.id}">
-                <i class="ph ph-trash" style="font-size: 1rem; color: var(--danger);"></i>
-            </button>
-        </div>
-    `;
-
-    // Event listener directo en el botón de eliminar (mejor que onclick global)
-    item.querySelector('.delete-btn').addEventListener('click', () => {
-        removeTransactionData(transaction.id);
-    });
-
-    listEl.prepend(item); // En realidad onSnapshot ya viene ordenado desc, asi que prepend invierte el orden visual si no tenemos cuidado.
-    // Como ordenamos por fecha desc en query, el primero es el más reciente. Prepend pondría el más reciente arriba si iteramos en orden?
-    // querySnapshot viene ordenado. forEach itera del más reciente al más antiguo.
-    // Si iteramos del más nuevo al más viejo y usamos prepend, el más viejo queda arriba.
-    // FIX: Usemos append si viene ordenado DESC, o cambiemos la lógica.
-    // Vamos a limpiar listEl antes de llamar updateUI, asi que simplemente append.
-}
-
-// Sobreescribir addTransactionDOM para usar append en lugar de prepend en el loop updateUI?
-// No, updateUI limpia e itera.
-// Si query es DESC (más nuevo primero), y usamos prepend:
-// 1. Llega Nuevo (Prepend -> Top)
-// 2. Llega Viejo (Prepend -> TopEncimaNuevo incorrecto)
-// Entonces deberíamos usar appendChild en el loop de updateUI.
-
-function updateUI() {
-    listEl.innerHTML = '';
-    // transactions viene ordenado DESC (nuevo -> viejo)
-    // Queremos nuevo arriba.
-    // Si usamos appendChild:
-    // 1. Nuevo (Top)
-    // 2. Viejo (Abajo)
-    // Correcto.
     transactions.forEach(t => {
-        // Copiamos logica de addTransactionDOM pero usando append
         const sign = t.amount < 0 ? '-' : '+';
         const typeClass = t.amount < 0 ? 'expense' : 'income';
 
@@ -310,12 +213,40 @@ function updateUI() {
                 </button>
             </div>
         `;
-        item.querySelector('.delete-btn').addEventListener('click', () => removeTransactionData(t.id));
+
+        // Event listener directo
+        item.querySelector('.delete-btn').addEventListener('click', () => {
+            removeTransactionData(t.id);
+        });
+
         listEl.appendChild(item);
     });
+
     updateValues();
     updateChart();
 }
+
+function updateValues() {
+    const amounts = transactions.map(t => t.amount);
+    const total = amounts.reduce((acc, item) => acc + item, 0).toFixed(2);
+
+    const income = transactions
+        .filter(t => t.amount > 0)
+        .reduce((acc, t) => acc + t.amount, 0)
+        .toFixed(2);
+
+    const expense = (
+        transactions
+            .filter(t => t.amount < 0)
+            .reduce((acc, t) => acc + t.amount, 0) * -1
+    ).toFixed(2);
+
+    totalBalanceEl.innerHTML = formatCurrency(total);
+    totalIncomeEl.innerHTML = formatCurrency(income);
+    totalExpenseEl.innerHTML = formatCurrency(expense);
+}
+
+
 
 
 // Formulario

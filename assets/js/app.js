@@ -41,16 +41,23 @@ let currentType = 'expense';
 
 // Iniciar sesión
 if (btnLogin) {
-    btnLogin.addEventListener('click', () => {
+    btnLogin.addEventListener('click', async () => {
+        btnLogin.disabled = true;
+        btnLogin.textContent = "Cargando...";
+
         const provider = new GoogleAuthProvider();
-        signInWithPopup(auth, provider)
-            .then((result) => {
-                // El observador onAuthStateChanged manejará el resto
-                console.log("Logged in:", result.user.displayName);
-            }).catch((error) => {
-                console.error("Error login:", error);
+        try {
+            const result = await signInWithPopup(auth, provider);
+            // El observador onAuthStateChanged manejará el resto
+            console.log("Logged in:", result.user.displayName);
+        } catch (error) {
+            console.error("Error login:", error);
+            if (error.code !== 'auth/cancelled-popup-request') {
                 alert("Error al iniciar sesión: " + error.message);
-            });
+            }
+            btnLogin.disabled = false;
+            btnLogin.innerHTML = '<i class="ph ph-google-logo"></i> Continuar con Google';
+        }
     });
 }
 
@@ -121,10 +128,17 @@ function loadUserData(uid) {
 }
 
 async function addTransactionData(text, amount, category) {
-    if (!currentUser) return;
+    console.log("Intentando agregar transacción:", { text, amount, category, user: currentUser });
+
+    if (!currentUser) {
+        console.error("No hay usuario autenticado al intentar guardar.");
+        alert("Debes iniciar sesión para guardar datos.");
+        return;
+    }
 
     try {
-        await addDoc(collection(db, "transactions"), {
+        console.log("Enviando a Firestore...");
+        const docRef = await addDoc(collection(db, "transactions"), {
             uid: currentUser.uid,
             text,
             amount,
@@ -132,10 +146,11 @@ async function addTransactionData(text, amount, category) {
             createdAt: serverTimestamp(), // Marca de tiempo del servidor para ordenar
             dateIso: new Date().toISOString() // Fecha local para filtrar en UI
         });
+        console.log("Documento escrito con ID: ", docRef.id);
         // No necesitamos actualizar UI manualmente, onSnapshot lo hará
     } catch (e) {
         console.error("Error adding document: ", e);
-        alert("Error guardando: " + e.message);
+        alert("Error guardando en base de datos: " + e.message);
     }
 }
 
@@ -260,9 +275,14 @@ document.querySelectorAll('.type-btn').forEach(btn => {
 
 form.addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log("Formulario enviado!");
+
     const text = document.getElementById('description').value;
     const amountVal = +document.getElementById('amount').value;
     const category = document.getElementById('category').value;
+
+    console.log("Valores del formulario:", { text, amountVal, category });
+
 
     if (text.trim() === '' || amountVal === 0) {
         alert('Descripción y monto requeridos');

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Gastos Inteligente</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Phosphor (Modernos y limpios) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tesseract.js para OCR -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <!-- Estilos -->
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/auth.css">
+</head>
+
+<body>
+    <div class="app-background">
+        <div class="glass-orb orb-1"></div>
+        <div class="glass-orb orb-2"></div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <i class="ph ph-wallet header-icon"></i>
+                <h1>Mi Billetera</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" title="Configuración"><i class="ph ph-gear"></i></button>
+                <div class="user-avatar">U</div>
+            </div>
+        </header>
+
+        <!-- Resumen Cards -->
+        <div class="summary-cards">
+            <div class="card summary-card balance">
+                <h3>Balance Total</h3>
+                <p class="amount" id="total-balance">$0.00</p>
+                <span class="trend up"><i class="ph ph-trend-up"></i> +2.5% vs mes ant.</span>
+            </div>
+            <div class="card summary-card income">
+                <div class="icon-box"><i class="ph ph-arrow-down-left"></i></div>
+                <div>
+                    <h3>Ingresos</h3>
+                    <p class="amount" id="total-income">$0.00</p>
+                </div>
+            </div>
+            <div class="card summary-card expense">
+                <div class="icon-box expense"><i class="ph ph-arrow-up-right"></i></div>
+                <div>
+                    <h3>Gastos</h3>
+                    <p class="amount" id="total-expense">$0.00</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+
+            <!-- Left Column: Form & Recent -->
+            <div class="col-left">
+
+                <!-- Quick Add Form -->
+                <section class="card form-section">
+                    <div class="section-header">
+                        <h2>Nueva Transacción</h2>
+                        <div class="toggle-type">
+                            <button class="type-btn active" data-type="expense">Gasto</button>
+                            <button class="type-btn" data-type="income">Ingreso</button>
+                        </div>
+                    </div>
+
+                    <form id="transaction-form">
+                        <div class="form-group">
+                            <label>Concepto</label>
+                            <input type="text" id="description" placeholder="Ej: Supermercado" required>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Monto</label>
+                                <div class="input-wrapper">
+                                    <span>$</span>
+                                    <input type="number" id="amount" placeholder="0.00" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Categoría</label>
+                                <select id="category" required>
+                                    <option value="viandas">🍱 Viandas</option>
+                                    <option value="servicios">⚡ Servicios</option>
+                                    <option value="ocio">🎉 Ocio</option>
+                                    <option value="tarjeta">💳 Tarjeta de Crédito</option>
+                                    <option value="comida">🍔 Comida</option>
+                                    <option value="transporte">🚌 Transporte</option>
+                                    <option value="salud">💊 Salud</option>
+                                    <option value="otros">📦 Otros</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Ticket / Comprobante (Opcional - Escaneo IA)</label>
+                            <div class="file-upload-wrapper" id="drop-zone">
+                                <input type="file" id="receipt-upload" accept="image/*" hidden>
+                                <div class="upload-content">
+                                    <i class="ph ph-scan upload-icon"></i>
+                                    <p>Arrastra una imagen o <span>haz clic para subir</span></p>
+                                    <p class="upload-hint">Detectaremos el monto automáticamente</p>
+                                </div>
+                                <div id="ocr-loader" class="ocr-loader hidden">
+                                    <div class="spinner"></div>
+                                    <p>Analizando imagen...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">
+                            <i class="ph ph-plus"></i> Agregar Transacción
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Recent Transactions -->
+                <section class="card recent-section">
+                    <div class="section-header">
+                        <h2>Movimientos Recientes</h2>
+                        <button class="btn-text">Ver todos</button>
+                    </div>
+                    <ul id="transaction-list" class="transaction-list">
+                        <!-- Items inyectados por JS -->
+                    </ul>
+                </section>
+            </div>
+
+            <!-- Right Column: Charts -->
+            <div class="col-right">
+                <section class="card chart-section">
+                    <div class="section-header">
+                        <h2>Gastos por Categoría</h2>
+                        <select class="chart-filter">
+                            <option>Este Mes</option>
+                            <option>Ultimos 3 Meses</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                    <div class="chart-legend" id="chart-legend">
+                        <!-- Leyenda personalizada -->
+                    </div>
+                </section>
+
+                <section class="card tips-section">
+                    <div class="tip-icon"><i class="ph ph-lightbulb"></i></div>
+                    <div class="tip-content">
+                        <h4>Tip de Ahorro</h4>
+                        <p>Tus gastos en "Comida" subieron un 15% este mes. Considera cocinar más en casa.</p>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="card login-card">
+            <div class="icon-box"
+                style="background: var(--primary); color: white; margin: 0 auto 1rem; width: 60px; height: 60px; font-size: 2rem;">
+                <i class="ph ph-wallet"></i>
+            </div>
+            <h2>Bienvenido</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Inicia sesión para sincronizar tus gastos en la
+                nube.</p>
+            <button id="btn-login" class="btn-primary">
+                <i class="ph ph-google-logo"></i> Continuar con Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="assets/js/app.js"></script>
+</body>
+
+</html>
